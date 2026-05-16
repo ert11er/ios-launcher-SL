@@ -136,7 +136,8 @@
 	[self.optionalTextLabel setHidden:YES];
 	[self.launchButton setEnabled:YES];
 	[self.launchButton removeTarget:nil action:nil forControlEvents:UIControlEventTouchUpInside];
-	if ([VerifyInstall verifyAll]) {
+	// FORCED: Bypassed GD verification checks entirely
+	if (YES) { 
 		[UIApplication sharedApplication].idleTimerDisabled = NO;
 		[self.launchButton setTitle:@"launcher.launch".loc forState:UIControlStateNormal];
 		[self.launchButton setImage:[[UIImage systemImageNamed:@"play.fill"] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
@@ -150,35 +151,8 @@
 			[self.launchButton addTarget:self action:@selector(launchGame) forControlEvents:UIControlEventTouchUpInside];
 		}
 	    [self.launchButton addTarget:self action:@selector(launchGame) forControlEvents:UIControlEventTouchUpInside];
-	} else {
-		[self.optionalTextLabel setHidden:NO];
-		if (![VerifyInstall verifyGDAuthenticity] && ![VerifyInstall verifyGDInstalled]) {
-			self.launchButton.frame = CGRectMake(self.view.center.x - 85, CGRectGetMaxY(self.optionalTextLabel.frame) + 15, 110, 45);
-			self.settingsButton.frame = CGRectMake(self.view.center.x + 30, CGRectGetMaxY(self.optionalTextLabel.frame) + 15, 45, 45);
-			self.optionalTextLabel.text = @"launcher.status.not-verified".loc;
-			[self.launchButton setTitle:@"launcher.verify-gd".loc forState:UIControlStateNormal];
-			[self.launchButton setImage:[[UIImage systemImageNamed:@"checkmark.circle"] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] forState:UIControlStateNormal];
-			[self.launchButton addTarget:self action:@selector(verifyGame) forControlEvents:UIControlEventTouchUpInside];
-		} else if (![VerifyInstall verifyGDInstalled] || ![VerifyInstall verifyGeodeInstalled]) {
-			self.launchButton.frame = CGRectMake(self.launchButton.frame.origin.x, CGRectGetMaxY(self.optionalTextLabel.frame) + 10, 140, 45);
-			self.settingsButton.frame = CGRectMake(self.settingsButton.frame.origin.x, CGRectGetMaxY(self.optionalTextLabel.frame) + 10, 45, 45);
-			self.optionalTextLabel.text = @"launcher.status.not-installed".loc;
-			[self.launchButton setTitle:@"launcher.download".loc forState:UIControlStateNormal];
-			[self.launchButton setImage:[[UIImage systemImageNamed:@"tray.and.arrow.down"] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate]
-							   forState:UIControlStateNormal];
-			[self.launchButton addTarget:self action:@selector(downloadGame) forControlEvents:UIControlEventTouchUpInside];
-		} else if ([VerifyInstall verifyAll]) {
-			self.launchButton.frame = CGRectMake(self.launchButton.frame.origin.x, CGRectGetMaxY(self.optionalTextLabel.frame) + 10, 140, 45);
-			self.settingsButton.frame = CGRectMake(self.settingsButton.frame.origin.x, CGRectGetMaxY(self.optionalTextLabel.frame) + 10, 45, 45);
-			[self.launchButton setEnabled:NO];
-			self.optionalTextLabel.text = @"launcher.status.check-updates".loc;
-			[self.launchButton setTitle:@"launcher.update".loc forState:UIControlStateNormal];
-			[self.launchButton setImage:[[UIImage systemImageNamed:@"tray.and.arrow.down"] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate]
-							   forState:UIControlStateNormal];
-			[self.launchButton addTarget:self action:@selector(updateGeode) forControlEvents:UIControlEventTouchUpInside];
-			[[GeodeInstaller alloc] checkUpdates:self download:YES];
-		}
 	}
+}
 }
 
 // TODO: Add another "patching" function which will patch but not write, that way it knows ahead of time whether it will need patching
@@ -513,17 +487,11 @@
 		}
 		return;
 	}
-	if (![VerifyInstall verifyGDAuthenticity]) {
-		[Utils showError:self title:@"launcher.status.not-verified".loc error:nil];
-		return;
-	}
 	[self.launchButton setEnabled:NO];
 	[UIApplication sharedApplication].idleTimerDisabled = YES;
 	if ([VerifyInstall verifyGDInstalled] && ![VerifyInstall verifyGeodeInstalled]) {
 		[[[GeodeInstaller alloc] init] startInstall:self ignoreRoot:NO];
 	} else {
-		if (![VerifyInstall verifyGDAuthenticity])
-			return AppLog(@"GD not verified! Not installing!");
 		if (LOCAL_BUILD == 1) {
 			AppLog(@"Downloading locally");
 			NSURLSession* session = [NSURLSession sessionWithConfiguration:[NSURLSessionConfiguration defaultSessionConfiguration] delegate:self delegateQueue:nil];
