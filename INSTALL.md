@@ -5,11 +5,14 @@ This page **will help you install Geode on your iDevice**. Unlike other platform
 > Geode **only works from iOS 14 to the latest iOS version**. Geode will not work on iOS versions below iOS 14.
 
 > [!TIP]
+> By iOS version (or iPadOS version), it's not talking about the model (like iPhone 12), but it's instead talking about the **software version** the device is running on. Geode can run on an **iPhone 6s / 6s Plus** up to the newest iPhone model (iPhone 17e)! Or from **iPad Mini 4** up to **iPad Air M4**
+
+> [!TIP]
 > If you **don't know the iOS version of your iDevice**, follow [this page from Apple](https://support.apple.com/en-us/109065) to check your iOS version.
 
 | Method | Supported iOS | Computer Required | Mod Support | Price |
 | ------ | ------------- | ----------------- | ----------------- | ----- |
-| [TrollStore](/OLD-IOS-INSTALL.md) | iOS 14–17.0 (excluding 16.7.x+ & 17.0.x+) | No* | Full (Native JIT) | Free |
+| [TrollStore / Jailbreak](/OLD-IOS-INSTALL.md) | iOS 14–17.0 (excluding 16.7.x+ & 17.0.x+) | No* | Full (Native JIT) | Free |
 | [SideStore](/MODERN-IOS-INSTALL.md) | iOS 14+ | First-time setup only | Full (JIT) / Partial (JIT-less) | Free |
 | [Apple Developer Certificate](/APPLE-DEV-CERT-INSTALL-GUIDE.md) | iOS 14+ | No* | Full (JIT) / Partial (JIT-less) | Paid |
 | [Free Certificates](/ENTERPRISE-INSTALL-GUIDE.md) | iOS 14+ | No | Partial | Free |

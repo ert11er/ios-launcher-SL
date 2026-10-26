@@ -95,10 +95,11 @@ Class LCSharedUtilsClass = nil;
 	const char* dlerr = dlerror();
 	if (!handle || (uint64_t)handle > 0xf00000000000) {
 		if (dlerr) {
-			AppLog(@"Failed to load ZSign: %s", dlerr);
+			*error = [NSError errorWithDomain:NSBundle.mainBundle.bundleIdentifier code:1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Failed to load ZSign: %s", dlerr]}];
 		} else {
-			AppLog(@"Failed to load ZSign: An unknown error occured.");
+			*error = [NSError errorWithDomain:NSBundle.mainBundle.bundleIdentifier code:1 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Failed to load ZSign: An unknown error occurred."]}];
 		}
+		AppLog(@"Failed to load ZSign: %s", dlerr);
 	}
 
 	loaded = YES;
@@ -359,6 +360,7 @@ Class LCSharedUtilsClass = nil;
 }
 
 + (void)signFilesInFolder:(NSURL*)url onProgressCreated:(void (^)(NSProgress* progress))onProgressCreated completion:(void (^)(NSString* error))completion {
+	AppLog(@"Signing files in %@", url);
 	NSFileManager* fm = [NSFileManager defaultManager];
 	NSURL* codesignPath = [url URLByAppendingPathComponent:@"_CodeSignature"];
 	NSURL* provisionPath = [url URLByAppendingPathComponent:@"embedded.mobileprovision"];
@@ -370,10 +372,13 @@ Class LCSharedUtilsClass = nil;
 
 	NSError* copyError = nil;
 	if (![fm copyItemAtURL:[gcMainBundle executableURL] toURL:tmpExecPath error:&copyError]) {
+		AppLog(@"Couldn't copy main bundle executable to tmp exec path! %@", copyError);
 		completion(copyError.localizedDescription);
 		return;
 	}
+	AppLog(@"Copied main bundle executable from %@ to %@, now signing!", [gcMainBundle executableURL], tmpExecPath);
 	[self signAppBundleWithZSign:url completionHandler:^(BOOL success, NSError* error) {
+		AppLog(@"Finished signing app bundle (%@) with ZSign (%@, %@)", url, (success) ? @"PASS" : @"FAIL", error);
 		NSString* ans = nil;
 		if (error) {
 			ans = error.localizedDescription;

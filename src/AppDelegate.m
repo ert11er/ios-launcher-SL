@@ -12,6 +12,7 @@
 static ImportCertHandler importCertFunc = nil;
 static NSData* certData = nil;
 static NSString* certPassword = nil;
+bool g_skipIntro = false;
 
 // https://www.uicolor.io/
 @implementation AppDelegate
@@ -92,16 +93,26 @@ static NSString* certPassword = nil;
 
 - (BOOL)application:(UIApplication*)application openURL:(nonnull NSURL*)url options:(nonnull NSDictionary<UIApplicationOpenURLOptionsKey, id>*)options {
 	if (url && [url isFileURL]) {
+		if (![Utils isDevCert]) {
+			dispatch_async(dispatch_get_main_queue(), ^{ [Utils showErrorGlobal:@"Cannot import mod: Enterprise Mode does not support mod importing yet." error:nil]; });
+			return NO;
+		}
 		NSFileManager* fm = NSFileManager.defaultManager;
 		NSString* fileName = [url lastPathComponent];
-
+		NSString* modID = fileName;
+		if ([fileName hasSuffix:@".geode"]) {
+			modID = [fileName substringToIndex:[fileName length] - [@".geode" length]];
+		}
 		NSURL* path;
+		NSURL* unzipPath;
 		NSURL* docPath = [NSURL fileURLWithPath:[LCPath docPath].path];
 		NSError* error = nil;
 		if ([Utils isContainerized]) {
 			path = [NSURL fileURLWithPath:[[LCPath docPath].path stringByAppendingString:@"/game/geode/mods/"]];
+			unzipPath = [NSURL fileURLWithPath:[[LCPath docPath].path stringByAppendingString:@"/game/geode/unzipped/binaries"]];
 		} else {
 			path = [NSURL fileURLWithPath:[[Utils docPath] stringByAppendingString:@"game/geode/mods/"]];
+			unzipPath = [NSURL fileURLWithPath:[[Utils docPath] stringByAppendingString:@"game/geode/unzipped/binaries"]];
 		}
 		NSURL* destinationURL = [path URLByAppendingPathComponent:fileName];
 		if ([fm fileExistsAtPath:destinationURL.path]) {
@@ -120,6 +131,43 @@ static NSString* certPassword = nil;
 					[fm removeItemAtURL:reconstructedPath error:nil];
 				}
 			}
+			bool is_dir;
+			if (![fm fileExistsAtPath:unzipPath.path isDirectory:&is_dir]) {
+				if (![fm createDirectoryAtPath:unzipPath.path withIntermediateDirectories:YES attributes:nil error:NULL]) {
+					AppLog(@"Failed to create binaries folder.");
+				}
+			}
+			if ([fm fileExistsAtPath:unzipPath.path isDirectory:&is_dir]) {
+				NSString* modDylibName = [modID stringByAppendingString:@".ios.dylib"];
+				NSURL* moveModTo = [unzipPath URLByAppendingPathComponent:modDylibName];
+				NSURL* modTmpPath = [[[fm temporaryDirectory] URLByAppendingPathComponent:@"mods"] URLByAppendingPathComponent:modDylibName];
+				[Utils decompress:destinationURL.path extractionPath:[[fm temporaryDirectory] URLByAppendingPathComponent:@"mods"].path completion:^(int decompError) {
+					if (decompError) {
+						dispatch_async(dispatch_get_main_queue(), ^{
+							[Utils showErrorGlobal:[NSString stringWithFormat:@"Decompressing ZIP failed.\nStatus Code: %d\nView app logs for more information.", decompError] error:nil];
+						});
+						return AppLog(@"Error trying to decompress ZIP: (Code %@)", decompError);
+					}
+					NSError* error;
+					if ([fm fileExistsAtPath:moveModTo.path]) {
+						AppLog(@"deleting existing mod");
+						NSError* removeError;
+						[fm removeItemAtPath:moveModTo.path error:&removeError];
+						if (removeError) {
+							return AppLog(@"Error trying to delete existing geode.loader folder: %@", removeError);
+						}
+					}
+					[fm moveItemAtPath:modTmpPath.path toPath:moveModTo.path error:&error];
+					if (error) {
+						AppLog(@"Couldn't move file after extracting: %@", error);
+					}
+					NSError* removeError;
+					[fm removeItemAtPath:[[fm temporaryDirectory] URLByAppendingPathComponent:@"mods"].path error:&removeError];
+					if (removeError) {
+						return AppLog(@"Error trying to delete tmp mods folder: %@", removeError);
+					}
+				}];
+			}
 			if (access)
 				[url stopAccessingSecurityScopedResource];
 			dispatch_async(dispatch_get_main_queue(), ^{ [Utils showNoticeGlobal:[NSString stringWithFormat:@"launcher.notice.mod-import".loc, fileName]]; });
@@ -133,7 +181,10 @@ static NSString* certPassword = nil;
 		}
 		return YES;
 	}
-
+	if ([url.host isEqualToString:@"skip"]) {
+        g_skipIntro = true;
+		return YES;
+	}
 	if ([url.host isEqualToString:@"launchent"]) {
 		AppLog(@"force open helper3");
 		[((RootViewController*)self.window.rootViewController) launchHelper2:NO patchCheck:YES];
@@ -215,9 +266,17 @@ static NSString* certPassword = nil;
 		}
 		return YES;
 	} else if ([url.host isEqualToString:@"geode-launch"] || [url.host isEqualToString:@"launch"] || [url.host isEqualToString:@"relaunch"]) {
+		__block BOOL safeMode = NO;
+		NSURLComponents* components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:NO];
+		for (NSURLQueryItem* item in components.queryItems) {
+			if ([item.name isEqualToString:@"safeMode"]) {
+				safeMode = [item.value isEqualToString:@"1"];
+				break;
+			}
+		}
 		[[Utils getPrefs] setValue:[Utils gdBundleName] forKey:@"selected"];
 		[[Utils getPrefs] setValue:@"GeometryDash" forKey:@"selectedContainer"];
-		[[Utils getPrefs] setBool:NO forKey:@"safemode"];
+		[[Utils getPrefs] setBool:safeMode forKey:@"safemode"];
 		if ([url.host isEqualToString:@"relaunch"] && ![Utils isSandboxed]) {
 			pid_t pid;
 			int status;
@@ -228,7 +287,7 @@ static NSString* certPassword = nil;
 				return NO;
 			if (waitpid(pid, &status, 0) != -1) {
 				if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-					dispatch_async(dispatch_get_main_queue(), ^{ [Utils tweakLaunch_withSafeMode:NO]; });
+					dispatch_async(dispatch_get_main_queue(), ^{ [Utils tweakLaunch_withSafeMode:safeMode]; });
 					return NO;
 				}
 			}

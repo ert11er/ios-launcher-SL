@@ -23,6 +23,7 @@
 #import "Patcher.h"
 
 extern NSString *lcAppUrlScheme;
+extern NSString *g_commitHash;
 
 @implementation Setting
 + (instancetype)create:(NSString *)title type:(SettingType)type disabled:(BOOL(^)(void))disabled visible:(BOOL(^)(void))visible prefsKey:(NSString *)prefsKey switchTag:(NSInteger)switchTag action:(void (^)(void))action custom:(void (^)(UITableViewCell *cell))custom {
@@ -588,10 +589,10 @@ extern NSString *lcAppUrlScheme;
 		}],
 		[Setting create:@"Enable 120hz (Experimental)".loc type:SettingTypeToggle disabled:^BOOL() {
 			//return ![Utils isSandboxed] || [[Utils getPrefs] integerForKey:@"ENTERPRISE_MODE"];
-			//return ![Utils isSandboxed] || ![Utils isDevCert];
-			return YES;
+			return ![Utils isSandboxed] || ![Utils isDevCert];
+			// return YES;
 		} visible:^BOOL() {
-			return NO;
+			return [[Utils getPrefs] boolForKey:@"FORCE_ANGLE"];
 		} prefsKey:@"USE_MAX_FPS" switchTag:20 action:nil custom:nil],
 	];
 	NSArray<Setting*>* jit = @[
@@ -939,6 +940,18 @@ extern NSString *lcAppUrlScheme;
 			NSURL* file = [Utils pathToMostRecentLogInDirectory:[[Utils docPath] stringByAppendingString:@"game/geode/crashlogs/"]];
 			[[self navigationController] pushViewController:[[LogsViewController alloc] initWithFile:file] animated:YES];
 		} custom:nil],
+		[Setting simpleCreate:@"Open Crashlogs Folder".loc type:SettingTypeButton action:^{
+			NSString* openURL;
+			if (![Utils isSandboxed]) {
+				openURL = [NSString stringWithFormat:@"filza://%@", [[Utils getGDDocPath] stringByAppendingPathComponent:@"Documents/game/geode/crashlogs"]];
+			} else {
+				openURL = [NSString stringWithFormat:@"shareddocuments://%@", [[LCPath dataPath] URLByAppendingPathComponent:@"GeometryDash/Documents/game/geode/crashlogs"].path];
+			}
+			NSURL* url = [NSURL URLWithString:openURL];
+			if ([[UIApplication sharedApplication] canOpenURL:url]) {
+				[[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+			}
+		} custom:nil],
 		[Setting create:@"Force Update" type:SettingTypeButton disabled:^BOOL(){
 			return ![Utils isSandboxed];
 		} visible:nil prefsKey:nil switchTag:0 action:^{
@@ -951,6 +964,24 @@ extern NSString *lcAppUrlScheme;
 			[alert addAction:okAction];
 			[alert addAction:cancelAction];
 			[self presentViewController:alert animated:YES completion:nil];
+		} custom:nil],
+		[Setting create:@"Delete and Redownload Geode" type:SettingTypeButton disabled:^BOOL(){
+			return (![[Utils getPrefs] boolForKey:@"JITLESS"] && ![[Utils getPrefs] boolForKey:@"FORCE_CERT_JIT"]) || (![Utils isSandboxed] || ![Utils isDevCert]);
+		} visible:nil prefsKey:nil switchTag:0 action:^{
+			if ([VerifyInstall verifyGeodeInstalled]) {
+				NSError* err;
+				NSString* docPath = [fm URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].lastObject.path;
+				NSString* tweakPath = [NSString stringWithFormat:@"%@/Tweaks/Geode.ios.dylib", docPath];
+				[fm removeItemAtPath:tweakPath error:&err];
+				if (err) {
+					[Utils showError:self title:@"Couldn't remove Geode.ios.dylib" error:err];
+					return;
+				}
+				[[GeodeInstaller alloc] checkUpdates:_root download:YES];
+				[self dismissViewControllerAnimated:YES completion:nil];
+			} else {
+				[Utils showError:_root title:@"general.check-updates.error".loc error:nil];
+			}
 		} custom:nil],
 		// TODO LATER: add support for enterprise mode and jb
 		[Setting create:@"Download Latest Resources" type:SettingTypeButton disabled:^BOOL(){
@@ -971,6 +1002,10 @@ extern NSString *lcAppUrlScheme;
 			cell.textLabel.userInteractionEnabled = YES;
 			UILongPressGestureRecognizer* longPressGR = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(showDevMode:)];
 			[cell.textLabel addGestureRecognizer:longPressGR];
+		}],
+		[Setting simpleCreate:@"about.build".loc type:SettingTypeCustomVal1 action:nil custom:^(UITableViewCell *cell){
+			cell.selectionStyle = UITableViewCellSelectionStyleNone;
+			cell.detailTextLabel.text = [g_commitHash isEqualToString:@"__COMMIT_HASH__"] ? @"Local" : g_commitHash;
 		}],
 		[Setting simpleCreate:@"about.geode".loc type:SettingTypeCustomVal1 action:nil custom:^(UITableViewCell *cell){
 			cell.selectionStyle = UITableViewCellSelectionStyleNone;
@@ -1032,6 +1067,7 @@ extern NSString *lcAppUrlScheme;
 		[Setting create:@"advanced.dev-mode".loc.loc type:SettingTypeToggle disabled:nil visible:nil prefsKey:@"DEVELOPER_MODE" switchTag:2 action:nil custom:nil],
 		[Setting create:@"developer.completedsetup".loc.loc type:SettingTypeToggle disabled:nil visible:nil prefsKey:@"CompletedSetup" switchTag:6 action:nil custom:nil],
 		[Setting create:@"developer.webserver".loc.loc type:SettingTypeToggle disabled:nil visible:nil prefsKey:@"WEB_SERVER" switchTag:12 action:nil custom:nil],
+		[Setting create:@"Wait for Debugger".loc.loc type:SettingTypeToggle disabled:nil visible:nil prefsKey:@"WAIT_DEBUGGER" switchTag:27 action:nil custom:nil],
 		[Setting create:@"Force Patching".loc.loc type:SettingTypeToggle disabled:nil visible:nil prefsKey:@"FORCE_PATCHING" switchTag:14 action:nil custom:nil],
 		[Setting create:@"Don't patch on Safe Mode".loc.loc type:SettingTypeToggle disabled:nil visible:nil prefsKey:@"DONT_PATCH_SAFEMODE" switchTag:15 action:nil custom:nil],
 		[Setting create:@"Force Enterprise Mode".loc.loc type:SettingTypeToggle disabled:nil visible:nil prefsKey:@"FORCE_ENTERPRISE" switchTag:17 action:nil custom:nil],
@@ -1161,6 +1197,7 @@ extern NSString *lcAppUrlScheme;
 				infoDict[@"GCSupportsControllerUserInteraction"] = @YES;
 				infoDict[@"GCSupportsGameMode"] = @YES;
 				infoDict[@"LSApplicationCategoryType"] = @"public.app-category.games";
+				infoDict[@"CADisableMinimumFrameDuration"] = @YES;
 				infoDict[@"CADisableMinimumFrameDurationOnPhone"] = @YES;
 				infoDict[@"UISupportsDocumentBrowser"] = @YES; // is this necessary? dunno
 				infoDict[@"UIFileSharingEnabled"] = @YES;
@@ -1606,6 +1643,9 @@ extern NSString *lcAppUrlScheme;
 		break;
 	case 26:
 		[Utils toggleKey:@"HELPER_IPA_DOCS"];
+		break;
+	case 27:
+		[Utils toggleKey:@"WAIT_DEBUGGER"];
 		break;
 	}
 }

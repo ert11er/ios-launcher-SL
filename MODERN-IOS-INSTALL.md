@@ -4,9 +4,6 @@
 > \
 > This guide assumes you will be installing SideStore. Using enterprise (aka free) certificates to install SideStore **will not work**, as the use of a computer is required to install SideStore.
 
-> [!NOTE]
-> Support for iOS 26.4 is experimental for SideStore. Geode will work on this version, but expect some bugs for SideStore.
-
 | Supported on | Requires Computer? | Mod Support | Price |
 |--------------|--------------------|-------------------|-------|
 | iOS 16 to 17.4 and above | Yes | *Partial* to *Full* (*Partial* on JIT-Less, only 5% not supported) | Free |
@@ -28,7 +25,7 @@
 1. Connect your iDevice (phone) to your computer via cable and trust the computer on your iDevice when prompted (trusting the computer is an important step!).
 2. Download iloader on your computer and LocalDevVPN on your iDevice as mentioned in the **Prerequisites** section.
 3. Sign in with your Apple ID in iloader.
-4. In the **Installers** section of iloader, click "SideStore (Stable)" if you are below **iOS 26.4**. If not, click "SideStore (Nightly)."
+4. In the **Installers** section of iloader, click "SideStore (Stable)"
 5. You will most likely get an **Untrusted Developer** error. To fix this, go to Settings > General > VPN and Device Management > Your Apple ID and press Trust. After doing this, move to the **Enabling Developer Mode** section below.
 > [!NOTE]
 > The Developer Mode option will not show up if you do not install SideStore! It will only appear when you install SideStore. So make sure to follow the **Install SideStore** section first, then try to enable Developer Mode.
@@ -40,15 +37,17 @@
 - ![](https://faq.altstore.io/~gitbook/image?url=https%3A%2F%2F2606795771-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FAfe8qEztjcTjsjjaMBY2%252Fuploads%252FWSvXhUTj8UZyGd1ex652%252FFcejvMRXgAE8k3R.jpg%3Falt%3Dmedia%26token%3D5e380cd0-be4e-406a-914b-8fa0519e1196&width=768&dpr=2&quality=100&sign=8860eb96&sv=2)
 - After your device restarts, you will be prompted to "Turn on Developer Mode", press "Turn On", and **Developer Mode** should be enabled!
 
-### Installing Geode through SideStore
+## Installing Geode through SideStore
 > [!NOTE]
 > You will need to **refresh** both SideStore and Geode every week. Otherwise, you will not be able to run the app.
 > Find how to do this in the Conclusion.
 
-1: Navigate to the **My Apps** tab, and tap the `+` button to add an app. Select the IPA for the Geode app, and the Geode app should appear on your home screen!
+1: Make sure you turn on **LocalDevVPN** before opening SideStore.
+
+2: Navigate to the **My Apps** tab, and tap the `+` button to add an app. Select the IPA for the Geode app, and the Geode app should appear on your home screen!
 ![](screenshots/install-sidestore.png)
 
-2: Navigate to the **Sources** tab, and tap the `+` button to add the Geode AltSource, then simply select it in the recommended sources (it will be labeled Geode). Now go to the **Browse** tab, then **Games**, and you will find Geode. Press `Free` to install it.
+3: Navigate to the **Sources** tab, and tap the `+` button to add the Geode AltSource, then simply select it in the recommended sources (it will be labeled Geode). Now go to the **Browse** tab, then **Games**, and you will find Geode. Press `Free` to install it.
 ![](screenshots/altsource-install.png)
 > [!NOTE]
 > The AltSource method may recieve updates *later*, and should only be used if you are okay with this.
@@ -101,4 +100,4 @@ You will need to be nearby your computer to use this, StikDebug does not and wil
 ## Conclusion
 You should now be able to run Geometry Dash with Geode! You can install mods by tapping the **Geode** button on the bottom of the menu, and browse for mods to install!
 > [!TIP]
-> To refresh Geode, connect to LocalDevVPN, then tap Refresh All.
+> To refresh Geode, connect to LocalDevVPN, open SideStore, then tap Refresh All in the My Apps tab.

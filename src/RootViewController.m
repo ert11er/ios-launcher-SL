@@ -24,6 +24,8 @@
 #include <mach-o/dyld.h>
 #include <objc/runtime.h>
 
+extern NSString* g_commitHash;
+
 #define LOCAL_BUILD 0
 #define LOCAL_URL "http://192.168.1.22:3000/Geometry-2.208.ipa"
 
@@ -190,6 +192,7 @@
 
 - (void)viewDidLoad {
 	[super viewDidLoad];
+	AppLog(@"== Geode Launcher - %@ (%@) ==", [NSString stringWithFormat:@"v%@", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"]], [g_commitHash isEqualToString:@"__COMMIT_HASH__"] ? @"Local" : g_commitHash)
 	[Utils increaseLaunchCount];
 
 	_icons = @[
@@ -876,7 +879,8 @@
 	NSString* openURL = [NSString stringWithFormat:@"geode-helper://launch?args=%@%@", encodedUrl, [[Utils getPrefs] boolForKey:@"USE_MAX_FPS"] ? @"&cahighfps=1" : @""];
 	if (patchCheck) {
 		NSString* checksum = [EnterpriseCompare getChecksum:NO];
-		openURL = [NSString stringWithFormat:@"geode-helper://launch?checksum=%@&args=%@%@", checksum, encodedUrl, [[Utils getPrefs] boolForKey:@"USE_MAX_FPS"] ? @"&cahighfps=1" : @""];
+		NSInteger modCount = [EnterpriseCompare getModCount:NO];
+		openURL = [NSString stringWithFormat:@"geode-helper://launch?checksum=%@&count=%ld&args=%@%@", checksum, (long)modCount, encodedUrl, [[Utils getPrefs] boolForKey:@"USE_MAX_FPS"] ? @"&cahighfps=1" : @""];
 	}
 	NSURL* url = [NSURL URLWithString:openURL];
 	if ([[UIApplication sharedApplication] canOpenURL:url]) {
@@ -946,6 +950,7 @@
 		infoDict[@"GCSupportsControllerUserInteraction"] = @YES;
 		infoDict[@"GCSupportsGameMode"] = @YES;
 		infoDict[@"LSApplicationCategoryType"] = @"public.app-category.games";
+		infoDict[@"CADisableMinimumFrameDuration"] = @YES;
 		infoDict[@"CADisableMinimumFrameDurationOnPhone"] = @YES;
 		infoDict[@"UISupportsDocumentBrowser"] = @YES; // is this necessary? dunno
 		infoDict[@"UIFileSharingEnabled"] = @YES;

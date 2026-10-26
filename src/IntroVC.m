@@ -28,7 +28,8 @@
 
 #include "LCUtils/utils.h"
 
-bool passJITTest = false;
+static bool s_passJITTest = false;
+extern bool g_skipIntro;
 
 @implementation IntroVC
 
@@ -41,6 +42,11 @@ bool passJITTest = false;
 - (void)goToNextStep {
 	switch (_currentStep) {
 	case InstallStepWelcome:
+		if (g_skipIntro) {
+			_currentStep = InstallStepComplete;
+		    [self completeSetup];
+			break;
+		}
 		_currentStep = InstallStepAccentColor;
 		[self showAccentColorStep];
 		break;
@@ -290,6 +296,7 @@ bool passJITTest = false;
 				subtitleLabel.text = @"intro.warning.subtitle1".loc;
 			}
 		} else {
+			[[Utils getPrefs] setBool:YES forKey:@"HELPER_IPA_DOCS"];
 			subtitleLabel.text = @"intro.warning.subtitle2".loc;
 		}
 	}
@@ -693,8 +700,8 @@ bool passJITTest = false;
 		};
 		BreakJITWrite((void*)buf_rx, instructions, sizeof(instructions));
 		int (*func)(void) = (int (*)(void))buf_rx;
-		passJITTest = func() == 42;
-		AppLog(@"Function called! Result: %@", (passJITTest) ? @"PASS" : @"FAIL");
+		s_passJITTest = func() == 42;
+		AppLog(@"Function called! Result: %@", (s_passJITTest) ? @"PASS" : @"FAIL");
 		[Utils showNoticeGlobal:@"Tap the Next button."];
 	}];
 	[nextButton addAction:action forControlEvents:UIControlEventTouchUpInside];
@@ -711,7 +718,7 @@ bool passJITTest = false;
 	[self transitionToView:view];
 }
 - (void)jitLCError {
-	if (passJITTest) {
+	if (s_passJITTest) {
 		[self goToNextStep];
 	} else {
 		[self showSoftLock:1];
@@ -851,12 +858,12 @@ bool passJITTest = false;
 				[optionsStack addArrangedSubview:[self makeOptionWithIcon:[UIImage systemImageNamed:@"signature"] title:@"Signulous" action:^(void){
 					[self showDevCertLock];
 				}]];
-                [optionsStack addArrangedSubview:[self makeOptionWithIcon:[UIImage systemImageNamed:@"dollarsign.circle"] title:@"Paid Certificate Provider" action:^(void){
+				[optionsStack addArrangedSubview:[self makeOptionWithIcon:[UIImage systemImageNamed:@"dollarsign.circle"] title:@"Paid Certificate Provider" action:^(void){
 					[self showDevCertLock];
 				}]];
 				[optionsStack addArrangedSubview:[self makeOptionWithIcon:[UIImage systemImageNamed:@"questionmark.circle"] title:@"Other" action:^(void){
 					_currentStep = InstallStepWarning;
-                    [self showWarningStep];
+					[self showWarningStep];
 				}]];
 			}
 			break;
@@ -947,11 +954,12 @@ bool passJITTest = false;
 	subtitleLabel.textAlignment = NSTextAlignmentCenter;
 	subtitleLabel.font = [UIFont systemFontOfSize:14];
 	subtitleLabel.numberOfLines = 8;
-	subtitleLabel.frame = CGRectMake(0, CGRectGetMaxY(titleLabel.frame) + 20, view.bounds.size.width, 200);
+	subtitleLabel.frame = CGRectMake(0, CGRectGetMaxY(titleLabel.frame) + 20, view.bounds.size.width, 270);
 	if ([[GCSharedUtils appGroupID] isEqualToString:@"Unknown"]) {
 		subtitleLabel.text = @"To continue, you'll need to import your .p12 signing certificate you used to sign the app.\n\nThis will be used to sign mods and get around the code signing requirement. You will also need the certificate password as well.\nIf you do not have a .p12 signing certificate, and you haven't paid for a certificate, please use SideStore instead.";
 	} else {
-		subtitleLabel.text = @"To continue, you'll need to import your signing certificate from AltStore/SideStore.\n\nYou can obtain the certificate by opening the app -> tapping settings -> scrolling down -> tap \"Export Signing Certificate\", entering any password of choice! (123456 as as an example) -> then the p12 file will be exported!\nMake sure to remember the password.";
+		// TODO: add an option to automatically import without the user needing to manually do this
+		subtitleLabel.text = @"To continue, you'll need to import your signing certificate from AltStore/SideStore.\n\nYou can obtain the certificate by opening the app -> tapping settings -> scrolling down -> tap \"Export Signing Certificate\", entering any password of choice! (123456 as as an example) -> then the p12 file will be exported!\nIf you are using a newer version of SideStore, instead of tapping \"Export Signing Certificate\", tap \"Certificate Management\" -> Hold on the certificate as if you're selecting the text (hold on either \"iloader (R)\" or text saying \"SideStore Certificate\") -> Tap Export Certificate -> Tap \"Export full\", entering any password of choice! (123456 as as an example) -> then the p12 file will be exported!\nMake sure to remember the password.";
 	}
 	[view addSubview:subtitleLabel];
 
@@ -989,7 +997,7 @@ bool passJITTest = false;
 	}];
 	[nextButton addAction:action forControlEvents:UIControlEventTouchUpInside];
 
-	nextButton.frame = CGRectMake((view.bounds.size.width / 2) / 2, CGRectGetMaxY(subtitleLabel.frame) + 80, view.bounds.size.width / 2, 45);
+	nextButton.frame = CGRectMake((view.bounds.size.width / 2) / 2, (view.bounds.size.height / 1.5), view.bounds.size.width / 2, 45);
 	[view addSubview:nextButton];
 
 	[self transitionToView:view];
